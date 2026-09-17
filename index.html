@@ -1,89 +1,140 @@
-ds<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - Unexum</title>
-    <!-- Importación estricta del SDK oficial de Appwrite -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #0056b3; color: white; border: none; cursor: pointer; margin-bottom: 10px; }
+        button:disabled { background-color: #ccc; }
+        .toggle-link { color: #0056b3; text-decoration: underline; cursor: pointer; text-align: center; display: block; font-size: 14px; }
+        .mensaje { font-weight: bold; margin-top: 10px; text-align: center; }
+    </style>
 </head>
-<body style="font-family: sans-serif; padding: 20px;">
+<body>
 
-    <!-- Contenedor del formulario de registro -->
+    <!-- 1. Formulario de Registro Principal -->
     <div id="pantalla-registro">
-        <h2>Crear cuenta en Repositorio Unexum</h2>
-        <form id="formulario">
-            <input type="text" id="nombre" placeholder="Nombre y Apellido" required><br><br>
-            <input type="email" id="email" placeholder="Correo electrónico" required><br><br>
-            <input type="password" id="password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8"><br><br>
-            <button type="submit" id="btn-submit">Registrarse</button>
+        <h2>Crear cuenta en Unexum</h2>
+        <form id="form-registro">
+            <input type="text" id="reg-nombre" placeholder="Nombre completo" required>
+            <input type="email" id="reg-email" placeholder="Correo electrónico" required>
+            <input type="password" id="reg-password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8">
+            <button type="submit" id="btn-registro">Registrarse</button>
         </form>
-        <p id="mensaje-registro" style="font-weight: bold;"></p>
+        <p id="msg-registro" class="mensaje"></p>
+        <span class="toggle-link" onclick="cambiarPantalla('pantalla-reenvio')">Ya tengo cuenta pero no me llegó el correo</span>
     </div>
 
-    <!-- Contenedor del estado de verificación (Oculto por defecto) -->
-    <div id="pantalla-verificacion" style="display: none;">
-        <h2>Verificando cuenta...</h2>
-        <p id="mensaje-verificacion">Conectando con el servidor, por favor espera.</p>
+    <!-- 2. Formulario de Reenvío (Para usuarios atascados) -->
+    <div id="pantalla-reenvio" style="display: none;">
+        <h2>Reenviar Verificación</h2>
+        <p style="font-size: 14px; color: #555;">Inicia sesión para generar un nuevo enlace.</p>
+        <form id="form-reenvio">
+            <input type="email" id="ren-email" placeholder="Correo electrónico" required>
+            <input type="password" id="ren-password" placeholder="Contraseña" required>
+            <button type="submit" id="btn-reenvio">Enviar nuevo correo</button>
+        </form>
+        <p id="msg-reenvio" class="mensaje"></p>
+        <span class="toggle-link" onclick="cambiarPantalla('pantalla-registro')">Volver al registro</span>
+    </div>
+
+    <!-- 3. Pantalla de Procesamiento de Verificación -->
+    <div id="pantalla-verificacion" style="display: none; text-align: center;">
+        <h2 id="titulo-verificacion">Procesando...</h2>
+        <p id="msg-verificacion">Conectando con el servidor.</p>
+        <span id="btn-fallo-verificacion" class="toggle-link" style="display: none;" onclick="cambiarPantalla('pantalla-reenvio')">Generar un nuevo enlace</span>
     </div>
 
     <script>
-        // 1. Inicialización de la conexión
+        // CONFIGURACIÓN ESTRICTA
+        const PROJECT_ID = '6aab4b390038ed01d8cb'; 
+        const URL_RETORNO = 'https://salobarreradev.github.io/registro-unexum/index.html'; 
+        
         const { Client, Account, ID } = Appwrite;
-        const client = new Client()
-            .setEndpoint('https://nyc.cloud.appwrite.io/v1')
-            .setProject('6aab4b390038ed01d8cb');
+        // Endpoint actualizado al clúster asignado (NYC)
+        const client = new Client().setEndpoint('https://nyc.cloud.appwrite.io/v1').setProject(PROJECT_ID);
         const account = new Account(client);
 
-        // 2. Lógica de Enrutamiento (Detección de estado)
+        // Control de interfaz
+        function cambiarPantalla(idActiva) {
+            document.getElementById('pantalla-registro').style.display = 'none';
+            document.getElementById('pantalla-reenvio').style.display = 'none';
+            document.getElementById('pantalla-verificacion').style.display = 'none';
+            document.getElementById(idActiva).style.display = 'block';
+        }
+
+        // Lógica de Enrutamiento (Interceptar URL de Appwrite)
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
         const secret = urlParams.get('secret');
 
-        // Si existen los parámetros en la URL, el usuario viene desde el correo
         if (userId && secret) {
-            document.getElementById('pantalla-registro').style.display = 'none';
-            document.getElementById('pantalla-verificacion').style.display = 'block';
+            cambiarPantalla('pantalla-verificacion');
             
-            // 3. Ejecución de la verificación
             account.updateVerification(userId, secret)
                 .then(() => {
-                    document.getElementById('mensaje-verificacion').innerText = "Cuenta verificada exitosamente. Ya puedes cerrar el navegador e iniciar sesión en la aplicación Unexum.";
+                    document.getElementById('titulo-verificacion').innerText = "¡Cuenta Verificada!";
+                    document.getElementById('msg-verificacion').innerText = "Ya puedes cerrar el navegador e iniciar sesión en la aplicación Unexum.";
                 })
                 .catch(error => {
-                    document.getElementById('mensaje-verificacion').innerText = "El enlace es inválido o ha expirado. Error: " + error.message;
+                    document.getElementById('titulo-verificacion').innerText = "Fallo de Verificación";
+                    document.getElementById('msg-verificacion').innerText = "Error: " + error.message + ". Es probable que el enlace ya haya sido utilizado o caducado.";
+                    document.getElementById('btn-fallo-verificacion').style.display = 'block';
                 });
-        } else {
-            // 4. Ejecución del registro
-            document.getElementById('formulario').addEventListener('submit', async function(evento) {
-                evento.preventDefault(); // Evita que la página se recargue
-                
-                const btn = document.getElementById('btn-submit');
-                const msj = document.getElementById('mensaje-registro');
-                btn.disabled = true;
-                msj.innerText = "Procesando la solicitud...";
-
-                const nombre = document.getElementById('nombre').value;
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-
-                try {
-                    // A. Envía los datos para crear el registro en la base de datos
-                    await account.create(ID.unique(), email, password, nombre);
-                    
-                    // B. Crea una sesión temporal en el navegador para autorizar el envío del correo
-                    await account.createEmailPasswordSession(email, password);
-                    
-                    // C. Solicita al servidor que dispare el correo. 
-                    await account.createVerification('[https://salobarreradev.github.io/registro-unexum/index.html](https://salobarreradev.github.io/registro-unexum/index.html)');
-                    
-                    msj.innerText = "Registro exitoso. Se ha enviado un enlace de verificación a tu correo.";
-                } catch (error) {
-                    msj.innerText = "Error de registro: " + error.message;
-                    btn.disabled = false;
-                }
-            });
         }
+
+        // Evento: Registro
+        document.getElementById('form-registro').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-registro');
+            const msg = document.getElementById('msg-registro');
+            btn.disabled = true; msg.innerText = "Creando cuenta...";
+
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const nombre = document.getElementById('reg-nombre').value;
+
+            try {
+                await account.create(ID.unique(), email, password, nombre);
+                await account.createEmailPasswordSession(email, password);
+                await account.createVerification(URL_RETORNO);
+                msg.innerText = "Éxito. Revisa tu bandeja de entrada (y la carpeta Spam).";
+                msg.style.color = "green";
+            } catch (error) {
+                msg.innerText = "Error: " + error.message;
+                msg.style.color = "red";
+                btn.disabled = false;
+            }
+        });
+
+        // Evento: Reenviar Correo
+        document.getElementById('form-reenvio').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-reenvio');
+            const msg = document.getElementById('msg-reenvio');
+            btn.disabled = true; msg.innerText = "Autenticando...";
+
+            const email = document.getElementById('ren-email').value;
+            const password = document.getElementById('ren-password').value;
+
+            try {
+                try { await account.deleteSession('current'); } catch(e) {} 
+                
+                await account.createEmailPasswordSession(email, password);
+                msg.innerText = "Generando enlace...";
+                await account.createVerification(URL_RETORNO);
+                msg.innerText = "Nuevo correo enviado. Revisa tu bandeja.";
+                msg.style.color = "green";
+            } catch (error) {
+                msg.innerText = "Error: " + error.message;
+                msg.style.color = "red";
+                btn.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>
