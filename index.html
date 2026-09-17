@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Unexum</title>
+    <!-- Importación estricta del SDK oficial de Appwrite -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@14.0.1"></script>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+
+    <!-- Contenedor del formulario de registro -->
+    <div id="pantalla-registro">
+        <h2>Crear cuenta en Repositorio Unexum</h2>
+        <form id="formulario">
+            <input type="text" id="nombre" placeholder="Nombre y Apellido" required><br><br>
+            <input type="email" id="email" placeholder="Correo electrónico" required><br><br>
+            <input type="password" id="password" placeholder="Contraseña (mínimo 8 caracteres)" required minlength="8"><br><br>
+            <button type="submit" id="btn-submit">Registrarse</button>
+        </form>
+        <p id="mensaje-registro" style="font-weight: bold;"></p>
+    </div>
+
+    <!-- Contenedor del estado de verificación (Oculto por defecto) -->
+    <div id="pantalla-verificacion" style="display: none;">
+        <h2>Verificando cuenta...</h2>
+        <p id="mensaje-verificacion">Conectando con el servidor, por favor espera.</p>
+    </div>
+
+    <script>
+        // 1. Inicialización de la conexión
+        const { Client, Account, ID } = Appwrite;
+        const client = new Client()
+            .setEndpoint('https://nyc.cloud.appwrite.io/v1')
+            .setProject('6aab4b390038ed01d8cb');
+        const account = new Account(client);
+
+        // 2. Lógica de Enrutamiento (Detección de estado)
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId');
+        const secret = urlParams.get('secret');
+
+        // Si existen los parámetros en la URL, el usuario viene desde el correo
+        if (userId && secret) {
+            document.getElementById('pantalla-registro').style.display = 'none';
+            document.getElementById('pantalla-verificacion').style.display = 'block';
+            
+            // 3. Ejecución de la verificación
+            account.updateVerification(userId, secret)
+                .then(() => {
+                    document.getElementById('mensaje-verificacion').innerText = "Cuenta verificada exitosamente. Ya puedes cerrar el navegador e iniciar sesión en la aplicación Unexum.";
+                })
+                .catch(error => {
+                    document.getElementById('mensaje-verificacion').innerText = "El enlace es inválido o ha expirado. Error: " + error.message;
+                });
+        } else {
+            // 4. Ejecución del registro
+            document.getElementById('formulario').addEventListener('submit', async function(evento) {
+                evento.preventDefault(); // Evita que la página se recargue
+                
+                const btn = document.getElementById('btn-submit');
+                const msj = document.getElementById('mensaje-registro');
+                btn.disabled = true;
+                msj.innerText = "Procesando la solicitud...";
+
+                const nombre = document.getElementById('nombre').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    // A. Envía los datos para crear el registro en la base de datos
+                    await account.create(ID.unique(), email, password, nombre);
+                    
+                    // B. Crea una sesión temporal en el navegador para autorizar el envío del correo
+                    await account.createEmailPasswordSession(email, password);
+                    
+                    // C. Solicita al servidor que dispare el correo. 
+                    await account.createVerification('https://github.com/SaloBarreraDev/registro-unexum/');
+                    
+                    msj.innerText = "Registro exitoso. Se ha enviado un enlace de verificación a tu correo.";
+                } catch (error) {
+                    msj.innerText = "Error de registro: " + error.message;
+                    btn.disabled = false;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
