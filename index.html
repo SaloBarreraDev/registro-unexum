@@ -75,7 +75,7 @@
                     await account.createEmailPasswordSession(email, password);
                     
                     // C. Solicita al servidor que dispare el correo. 
-                    await account.createVerification('https://github.com/SaloBarreraDev/registro-unexum/');
+                    await account.createVerification('https://salobarreradev.github.io/registro-unexum/');
                     
                     msj.innerText = "Registro exitoso. Se ha enviado un enlace de verificación a tu correo.";
                 } catch (error) {
