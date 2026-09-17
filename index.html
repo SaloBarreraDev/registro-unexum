@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ds<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -75,7 +75,7 @@
                     await account.createEmailPasswordSession(email, password);
                     
                     // C. Solicita al servidor que dispare el correo. 
-                    await account.createVerification('https://salobarreradev.github.io/registro-unexum/');
+                    await account.createVerification('[https://salobarreradev.github.io/registro-unexum/index.html](https://salobarreradev.github.io/registro-unexum/index.html)');
                     
                     msj.innerText = "Registro exitoso. Se ha enviado un enlace de verificación a tu correo.";
                 } catch (error) {
